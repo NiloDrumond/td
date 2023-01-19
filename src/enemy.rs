@@ -2,10 +2,10 @@ use bevy::{prelude::*, sprite::Anchor};
 
 use crate::{
     assets::SpriteSheets,
-    config::{SysLabel, TILE_WIDTH},
-    isometric::{coordinates_to_screen, Coordinates},
+    config::{SysLabel, ENEMY_OFFSET},
+    isometric::ScreenCoordinates,
     map::CurrentMap,
-    math::{move_towards},
+    math::move_towards,
 };
 
 pub struct EnemyPlugin;
@@ -13,7 +13,8 @@ pub struct EnemyPlugin;
 impl Plugin for EnemyPlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_system(test_spawn.after(SysLabel::LoadMap))
-            .add_system(move_enemies);
+            .add_system(move_enemies)
+            .add_system(check_enemies_through.after(move_enemies));
     }
 }
 
@@ -21,53 +22,76 @@ impl Plugin for EnemyPlugin {
 pub struct Enemy {
     speed: f32,
     sprite_index: usize,
-    position: Coordinates,
     last_waypoint: usize,
 }
 
 fn test_spawn(commands: Commands, handles: Res<SpriteSheets>, map: Res<CurrentMap>) {
     let enemy_sprites = &handles.enemy_sprites;
-    let waypoint = &map.path.waypoints[0];
-    spawn_enemy(
-        commands,
-        waypoint.coordinates.clone(),
-        32,
-        enemy_sprites,
-        map,
-    );
+    spawn_enemy(commands, 32, enemy_sprites, map);
 }
 
-fn move_enemies(mut enemies_query: Query<(&mut Transform, &mut Enemy)>, map: Res<CurrentMap>) {
+fn move_enemies(
+    mut enemies_query: Query<(&mut Transform, &mut Enemy, &mut TextureAtlasSprite)>,
+    map: Res<CurrentMap>,
+    time: Res<Time>,
+) {
     let waypoints = &map.path.waypoints;
-    for (mut transform, mut enemy) in enemies_query.iter_mut() {
+    let _dt = time.delta().as_secs_f32();
+    for (mut transform, mut enemy, mut sprite) in enemies_query.iter_mut() {
         // let direction = waypoints[enemy.last_waypoint].direction;
-        let next_coords = waypoints[enemy.last_waypoint + 1].coordinates;
-        let Vec2 { x, y } = coordinates_to_screen(&next_coords);
-        let next_waypoint = Vec3::new(x, y, transform.translation.z);
-        transform.translation = move_towards(
-            transform.translation,
-            next_waypoint,
-            enemy.speed,
+        let next_waypoint = &waypoints[enemy.last_waypoint + 1];
+        let next_position = Vec3::new(
+            next_waypoint.screen_coordinates.x,
+            next_waypoint.screen_coordinates.y + ENEMY_OFFSET,
+            transform.translation.z,
         );
-        if transform.translation == next_waypoint {
+        transform.translation = move_towards(transform.translation, next_position, enemy.speed);
+        if transform.translation == next_position {
+            let flip_x = next_waypoint.direction.flip_x();
+            let facing_backwards = next_waypoint.direction.facing_backwards();
+            let sprite_index = if facing_backwards {
+                enemy.sprite_index + 4
+            } else {
+                enemy.sprite_index
+            };
+            sprite.flip_x = flip_x;
+            sprite.index = sprite_index;
             enemy.last_waypoint += 1;
+        }
+    }
+}
+
+fn check_enemies_through(
+    mut commands: Commands,
+    enemies_query: Query<(Entity, &Enemy)>,
+    map: Res<CurrentMap>,
+) {
+    let last_waypoint = &map.path.waypoints.len() - 1;
+    for (entity, enemy) in enemies_query.iter() {
+        if enemy.last_waypoint == last_waypoint {
+            commands.entity(entity).despawn();
         }
     }
 }
 
 fn spawn_enemy(
     mut commands: Commands,
-    position: Coordinates,
     sprite_index: usize,
     texture_atlas: &Handle<TextureAtlas>,
     current_map: Res<CurrentMap>,
 ) -> Entity {
-    let Vec2 {
+    let start = current_map.path.waypoints.first().unwrap();
+    let ScreenCoordinates {
         x: screen_x,
         y: screen_y,
-    } = coordinates_to_screen(&position);
-    let screen_y = screen_y + TILE_WIDTH / 2.0;
-    let height_offset = current_map.height_offset;
+    } = start.screen_coordinates;
+    let flip_x = start.direction.flip_x();
+    let facing_backwards = start.direction.facing_backwards();
+    let sprite_index = if facing_backwards {
+        sprite_index + 4
+    } else {
+        sprite_index
+    };
 
     commands
         .spawn(SpriteSheetBundle {
@@ -75,17 +99,17 @@ fn spawn_enemy(
             sprite: TextureAtlasSprite {
                 anchor: Anchor::BottomCenter,
                 index: sprite_index,
+                flip_x,
                 ..default()
             },
             transform: Transform {
-                translation: Vec3::new(screen_x, screen_y + height_offset, 1.0),
+                translation: Vec3::new(screen_x, screen_y + ENEMY_OFFSET, 1.0),
                 ..default()
             },
             ..default()
         })
         .insert(Enemy {
             sprite_index,
-            position,
             speed: 0.1,
             last_waypoint: 0,
         })

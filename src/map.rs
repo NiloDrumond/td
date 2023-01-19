@@ -4,16 +4,22 @@ use std::{error::Error, fs::File, io::BufReader};
 
 use crate::{
     assets::SpriteSheets,
-    config::{SysLabel, TILE_HEIGHT, WAYPOINTS_TILESET_NAME},
-    isometric::{coordinates_to_screen, Coordinates},
+    config::{SysLabel, TILE_HEIGHT, WAYPOINTS_TILESET_NAME, TILE_WIDTH},
+    isometric::{coordinates_to_screen, Coordinates, SpriteDirection, ScreenCoordinates},
 };
 
 pub struct MapPlugin;
 
+struct ProtoWaypoint {
+    coordinates: Coordinates,
+    screen_coordinates: ScreenCoordinates,
+}
+
 #[derive(Debug)]
 pub struct Waypoint {
     pub coordinates: Coordinates,
-    pub direction: Vec2,
+    pub screen_coordinates: ScreenCoordinates,
+    pub direction: SpriteDirection,
 }
 
 pub struct MapPath {
@@ -66,37 +72,45 @@ fn parse_map() -> Result<MapData, Box<dyn Error>> {
     Ok(parsed)
 }
 
-fn sort_waypoints(waypoints_map: &mut HashMap<usize, Coordinates>) -> Vec<Waypoint> {
-    let mut coordinates: Vec<Coordinates> = vec![];
+fn sort_waypoints(
+    waypoints_map: &mut HashMap<usize, Coordinates>,
+    height_offset: f32,
+) -> Vec<Waypoint> {
+    let mut proto_waypoints: Vec<ProtoWaypoint> = vec![];
     for i in 0..99 {
         let index = i as usize;
-        let Some(coord) = waypoints_map.remove(&index) else {
+        let Some(coordinates) = waypoints_map.remove(&index) else {
             break;
         };
-        coordinates.push(coord);
+        let ScreenCoordinates { x, y } = coordinates_to_screen(&coordinates);
+        proto_waypoints.push(ProtoWaypoint {
+            coordinates,
+            screen_coordinates: ScreenCoordinates {
+                x,
+                y: y + height_offset,
+            },
+        })
     }
-    let mut waypoints: Vec<Waypoint> = coordinates
+    let mut waypoints: Vec<Waypoint> = proto_waypoints
         .windows(2)
         .map(|window| {
-            if let [first, second] = window {
-                let screen_first = coordinates_to_screen(&first);
-                let screen_second = coordinates_to_screen(&second);
-                let direction = screen_second - screen_first;
-                Waypoint {
-                    coordinates: first.clone(),
-                    direction,
-                }
-            }  else {
-                panic!();
+            let [first, second] = window else {
+            panic!();
+        };
+            Waypoint {
+                coordinates: first.coordinates,
+                screen_coordinates: first.screen_coordinates,
+                direction: SpriteDirection::get_direction(first.coordinates, second.coordinates),
             }
         })
         .collect();
-
+    let last = proto_waypoints.last().unwrap();
+    let penul = waypoints.last().unwrap();
     waypoints.push(Waypoint {
-        coordinates: *coordinates.last().unwrap(),
-        direction: Vec2::ZERO
+        coordinates: last.coordinates,
+        screen_coordinates: last.screen_coordinates,
+        direction: penul.direction,
     });
-    println!("{:?}", waypoints);
     waypoints
 }
 
@@ -109,7 +123,7 @@ fn load_map(mut commands: Commands) {
     let waypoint_layer = &map.layers[waypoint_layer_idx];
     let first_waypoint = &map.tilesets[waypoint_layer_idx].firstgid;
 
-    let height_offset = ((map.width + map.height) as f32 / 4.0) * TILE_HEIGHT;
+    let height_offset = ((map.width + map.height) as f32 / 8.0) * TILE_WIDTH;
     let mut waypoints_map: HashMap<usize, Coordinates> = HashMap::new();
     for (index, sprite_index) in waypoint_layer.data.iter().enumerate() {
         if *sprite_index != 0 {
@@ -120,7 +134,7 @@ fn load_map(mut commands: Commands) {
         }
     }
 
-    let path = sort_waypoints(&mut waypoints_map);
+    let path = sort_waypoints(&mut waypoints_map, height_offset);
     let current_map = CurrentMap {
         height_offset,
         path: MapPath {
