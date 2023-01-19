@@ -2,9 +2,7 @@ use bevy::{
     input::mouse::{MouseMotion, MouseWheel},
     prelude::*,
 };
-use bevy_pixel_camera::{
-    PixelCameraBundle, PixelCameraPlugin, PixelProjection,
-};
+use bevy_pixel_camera::{PixelCameraBundle, PixelCameraPlugin, PixelProjection};
 
 use crate::config::{MIN_CAMERA_HEIGHT, MIN_CAMERA_WIDTH, PAN_BUTTON, ZOOM_STEP};
 
@@ -23,17 +21,6 @@ impl Plugin for CameraPlugin {
 
 fn setup_camera(mut commands: Commands) {
     commands.spawn(PixelCameraBundle::from_resolution(320, 240));
-    // commands.spawn(Camera2dBundle::default());
-    // commands.spawn(Camera3dBundle {
-    //     projection: OrthographicProjection {
-    //         scale: 3.0,
-    //         scaling_mode: ScalingMode::FixedVertical(2.0),
-    //         ..default()
-    //     }
-    //     .into(),
-    //     transform: Transform::from_xyz(5.0, 5.0, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
-    //     ..default()
-    // });
 }
 
 fn pan_camera(
