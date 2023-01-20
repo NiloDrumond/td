@@ -25,11 +25,6 @@ pub struct Enemy {
     last_waypoint: usize,
 }
 
-fn test_spawn(commands: Commands, handles: Res<SpriteSheets>, map: Res<CurrentMap>) {
-    let enemy_sprites = &handles.enemy_sprites;
-    spawn_enemy(commands, 32, enemy_sprites, map);
-}
-
 fn move_enemies(
     mut enemies_query: Query<(&mut Transform, &mut Enemy, &mut TextureAtlasSprite)>,
     map: Res<CurrentMap>,
@@ -38,7 +33,6 @@ fn move_enemies(
     let waypoints = &map.path.waypoints;
     let _dt = time.delta().as_secs_f32();
     for (mut transform, mut enemy, mut sprite) in enemies_query.iter_mut() {
-        // let direction = waypoints[enemy.last_waypoint].direction;
         let next_waypoint = &waypoints[enemy.last_waypoint + 1];
         let next_position = Vec3::new(
             next_waypoint.screen_coordinates.x,
@@ -61,6 +55,7 @@ fn move_enemies(
     }
 }
 
+
 fn check_enemies_through(
     mut commands: Commands,
     enemies_query: Query<(Entity, &Enemy)>,
@@ -72,6 +67,11 @@ fn check_enemies_through(
             commands.entity(entity).despawn();
         }
     }
+}
+
+fn test_spawn(commands: Commands, handles: Res<SpriteSheets>, map: Res<CurrentMap>) {
+    let enemy_sprites = &handles.enemy_sprites;
+    spawn_enemy(commands, 32, enemy_sprites, map);
 }
 
 fn spawn_enemy(
@@ -97,7 +97,7 @@ fn spawn_enemy(
         .spawn(SpriteSheetBundle {
             texture_atlas: texture_atlas.clone(),
             sprite: TextureAtlasSprite {
-                anchor: Anchor::BottomCenter,
+                anchor: Anchor::Center,
                 index: sprite_index,
                 flip_x,
                 ..default()

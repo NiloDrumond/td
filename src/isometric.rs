@@ -45,10 +45,35 @@ impl SpriteDirection {
     }
 }
 
-// https://clintbellanger.net/articles/isometric_math/
+// NOTE: https://clintbellanger.net/articles/isometric_math/
 pub fn coordinates_to_screen(coordinates: &Coordinates) -> ScreenCoordinates {
     let Coordinates(x, y) = coordinates;
+    let x = *x as isize;
+    let y = *y as isize;
     let screen_x = (x - y) as f32 * (TILE_WIDTH / 2.0);
     let screen_y = (x + y) as f32 * (TILE_WIDTH / 4.0) * -1.0;
     ScreenCoordinates::new(screen_x, screen_y)
+}
+
+// sx = (x - y) * half
+// sx = half.x - half.y
+// half.x = sx + half.y
+// width.x = 2.sx + width.y
+// x = (2.sx) / width + y
+// x = (2.sx) / width - 4.sy / width - x
+// x = (sx - 2sy) / width 
+//
+// sy = (x + y) * quarter * -1
+// -sy = quarter.x + quarter.y
+// quarter.y = -sy - quarter.x
+// width.y = -4.sy - width.x
+// y = -4.sy / width - x
+// y = -4.sy / width - 2.sx / width - y
+// y = (-2.sy - sx) / width
+
+pub fn screen_to_coordinates(screen_coordinates: &ScreenCoordinates) -> Coordinates {
+    let ScreenCoordinates { x, y } = screen_coordinates;
+    let iso_x = (x - 2.0 * y) / TILE_WIDTH;
+    let iso_y = -1.0 * (2.0 * y + x) / TILE_WIDTH;
+    Coordinates(iso_x as usize, iso_y as usize)
 }

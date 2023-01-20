@@ -1,16 +1,18 @@
 use assets::AssetsPlugin;
 use bevy::prelude::*;
 use camera::CameraPlugin;
-use map::MapPlugin;
 use enemy::EnemyPlugin;
+use map::MapPlugin;
+use tower::TowerPlugin;
 
-mod camera;
-mod enemy;
-mod map;
-mod config;
-mod math;
-mod isometric;
 mod assets;
+mod camera;
+mod config;
+mod enemy;
+mod isometric;
+mod map;
+mod math;
+mod tower;
 
 fn main() {
     App::new()
@@ -19,6 +21,6 @@ fn main() {
         .add_plugin(CameraPlugin)
         .add_plugin(MapPlugin)
         .add_plugin(EnemyPlugin)
+        .add_plugin(TowerPlugin)
         .run();
 }
-

@@ -4,8 +4,12 @@ use std::{error::Error, fs::File, io::BufReader};
 
 use crate::{
     assets::SpriteSheets,
-    config::{SysLabel, TILE_HEIGHT, WAYPOINTS_TILESET_NAME, TILE_WIDTH},
-    isometric::{coordinates_to_screen, Coordinates, SpriteDirection, ScreenCoordinates},
+    camera::MouseWorldPos,
+    config::{SysLabel, TILE_WIDTH, WAYPOINTS_TILESET_NAME, TILE_HEIGHT_OFFSET},
+    isometric::{
+        coordinates_to_screen, screen_to_coordinates, Coordinates, ScreenCoordinates,
+        SpriteDirection,
+    },
 };
 
 pub struct MapPlugin;
@@ -53,6 +57,9 @@ pub struct CurrentMap {
     pub height_offset: f32,
 }
 
+#[derive(Component)]
+struct CursorIndicator;
+
 impl Plugin for MapPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.add_startup_system_to_stage(
@@ -61,7 +68,9 @@ impl Plugin for MapPlugin {
                 .after(SysLabel::LoadAssets)
                 .label(SysLabel::LoadMap),
         )
-        .add_startup_system(render_map.after(SysLabel::LoadMap));
+        .add_startup_system(render_map.after(SysLabel::LoadMap))
+        .add_startup_system(render_cursor)
+        .add_system(update_cursor);
     }
 }
 
@@ -165,7 +174,7 @@ fn render_map(mut commands: Commands, handles: Res<SpriteSheets>, current_map: R
             commands.spawn(SpriteSheetBundle {
                 texture_atlas: handle.clone(),
                 sprite: TextureAtlasSprite {
-                    anchor: Anchor::BottomCenter,
+                    anchor: Anchor::Center,
                     index: *sprite_index as usize - 1,
                     ..default()
                 },
@@ -177,4 +186,40 @@ fn render_map(mut commands: Commands, handles: Res<SpriteSheets>, current_map: R
             });
         }
     }
+}
+
+fn render_cursor(mut commands: Commands, handles: Res<SpriteSheets>) {
+    let handle = &handles.indicators_sprites;
+
+    commands
+        .spawn(SpriteSheetBundle {
+            texture_atlas: handle.clone(),
+            sprite: TextureAtlasSprite {
+                anchor: Anchor::Center,
+                index: 4,
+                ..default()
+            },
+            transform: Transform {
+                translation: Vec3::new(9999.0, 9999.0, 2.0),
+                ..default()
+            },
+            ..default()
+        })
+        .insert(CursorIndicator);
+}
+
+fn update_cursor(
+    mouse_pos: Res<MouseWorldPos>,
+    mut query: Query<&mut Transform, With<CursorIndicator>>,
+    current_map: Res<CurrentMap>,
+) {
+    let height_offset = current_map.height_offset;
+    let total_offset = height_offset + TILE_HEIGHT_OFFSET;
+    let mut transform = query.single_mut();
+    let iso_position = screen_to_coordinates(&ScreenCoordinates::new(
+        mouse_pos.x,
+        mouse_pos.y - total_offset ,
+    ));
+    let ScreenCoordinates { x, y } = coordinates_to_screen(&iso_position);
+    transform.translation = Vec3::new(x, y + total_offset, 2.0);
 }
