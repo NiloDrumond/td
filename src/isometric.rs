@@ -5,6 +5,29 @@ use crate::config::TILE_WIDTH;
 #[derive(Clone, Copy, Debug)]
 pub struct Coordinates(pub usize, pub usize);
 
+impl Coordinates {
+    pub fn get_vertices(&self, range: usize) -> Vec<ScreenCoordinates> {
+        let Coordinates(x, y) = self;
+        let x = *x;
+        let y = *y;
+        let top = Coordinates(x - range, y - range);
+        let right = Coordinates(x + range + 1, y - range);
+        let bottom = Coordinates(x + range + 1, y + range + 1);
+        let left = Coordinates(x - range, y + range + 1);
+
+        let mut top = coordinates_to_screen(&top);
+        let mut right = coordinates_to_screen(&right);
+        let mut bottom = coordinates_to_screen(&bottom);
+        let mut left = coordinates_to_screen(&left);
+        // top.y -= 0.1;
+        // right.x += 0.1;
+        // bottom.y -= 0.1;
+        // left.x -= 0.1;
+
+        vec![top, right, bottom, left]
+    }
+}
+
 pub type ScreenCoordinates = Vec2;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -61,7 +84,7 @@ pub fn coordinates_to_screen(coordinates: &Coordinates) -> ScreenCoordinates {
 // width.x = 2.sx + width.y
 // x = (2.sx) / width + y
 // x = (2.sx) / width - 4.sy / width - x
-// x = (sx - 2sy) / width 
+// x = (sx - 2sy) / width
 //
 // sy = (x + y) * quarter * -1
 // -sy = quarter.x + quarter.y

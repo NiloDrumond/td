@@ -1,10 +1,15 @@
+use std::ops::AddAssign;
+
 use bevy::{
     input::mouse::{MouseMotion, MouseWheel},
     prelude::*,
 };
 use bevy_pixel_camera::{PixelCameraBundle, PixelCameraPlugin, PixelProjection};
 
-use crate::config::{MIN_CAMERA_HEIGHT, MIN_CAMERA_WIDTH, PAN_BUTTON, ZOOM_STEP};
+use crate::{
+    config::{MIN_CAMERA_HEIGHT, MIN_CAMERA_WIDTH, PAN_BUTTON, ZOOM_STEP},
+    map::CurrentMap,
+};
 
 #[derive(Component)]
 struct MainCamera;
@@ -31,6 +36,7 @@ impl Plugin for CameraPlugin {
             //     color: Color::rgb(0.1, 0.1, 0.1),
             // })
             .add_startup_system(setup_camera)
+            .add_startup_system_to_stage(StartupStage::PostStartup, offset_camera)
             .add_system(pan_camera)
             .add_system(track_mouse_world_position);
     }
@@ -113,4 +119,14 @@ fn track_mouse_world_position(
         let Vec2 { x, y } = world_pos;
         *mouse_pos = MouseWorldPos { x, y };
     }
+}
+
+fn offset_camera(
+    mut q_camera: Query<&mut Transform, With<PixelProjection>>,
+    current_map: Res<CurrentMap>,
+) {
+    let mut transform = q_camera.single_mut();
+    transform
+        .translation
+        .add_assign(Vec3::new(0.0, current_map.height_offset, 0.0));
 }

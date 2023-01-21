@@ -2,8 +2,10 @@ use bevy::prelude::{MouseButton, SystemLabel};
 
 pub const TILE_WIDTH: f32 = 16.0;
 pub const TILE_HEIGHT: f32 = 17.0;
-pub const ENEMY_OFFSET: f32 = TILE_WIDTH / 2.0;
+pub const ENEMY_OFFSET: f32 = (TILE_WIDTH / 2.0) - 4.0;
 pub const TILE_HEIGHT_OFFSET: f32 = TILE_WIDTH - TILE_HEIGHT;
+pub const STATBAR_WIDTH: f32 = 16.0;
+pub const STATBAR_HEIGHT: f32 = 3.0;
 
 pub const MIN_CAMERA_WIDTH: i32 = 160;
 pub const MIN_CAMERA_HEIGHT: i32 = 80;

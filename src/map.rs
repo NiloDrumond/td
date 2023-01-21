@@ -5,7 +5,7 @@ use std::{error::Error, fs::File, io::BufReader};
 use crate::{
     assets::SpriteSheets,
     camera::MouseWorldPos,
-    config::{SysLabel, TILE_WIDTH, WAYPOINTS_TILESET_NAME, TILE_HEIGHT_OFFSET},
+    config::{SysLabel, TILE_HEIGHT_OFFSET, TILE_WIDTH, WAYPOINTS_TILESET_NAME},
     isometric::{
         coordinates_to_screen, screen_to_coordinates, Coordinates, ScreenCoordinates,
         SpriteDirection,
@@ -81,10 +81,7 @@ fn parse_map() -> Result<MapData, Box<dyn Error>> {
     Ok(parsed)
 }
 
-fn sort_waypoints(
-    waypoints_map: &mut HashMap<usize, Coordinates>,
-    height_offset: f32,
-) -> Vec<Waypoint> {
+fn sort_waypoints(waypoints_map: &mut HashMap<usize, Coordinates>) -> Vec<Waypoint> {
     let mut proto_waypoints: Vec<ProtoWaypoint> = vec![];
     for i in 0..99 {
         let index = i as usize;
@@ -94,10 +91,7 @@ fn sort_waypoints(
         let ScreenCoordinates { x, y } = coordinates_to_screen(&coordinates);
         proto_waypoints.push(ProtoWaypoint {
             coordinates,
-            screen_coordinates: ScreenCoordinates {
-                x,
-                y: y + height_offset,
-            },
+            screen_coordinates: ScreenCoordinates { x, y },
         })
     }
     let mut waypoints: Vec<Waypoint> = proto_waypoints
@@ -132,7 +126,7 @@ fn load_map(mut commands: Commands) {
     let waypoint_layer = &map.layers[waypoint_layer_idx];
     let first_waypoint = &map.tilesets[waypoint_layer_idx].firstgid;
 
-    let height_offset = ((map.width + map.height) as f32 / 8.0) * TILE_WIDTH;
+    let height_offset = ((map.width + map.height) as f32 / 8.0) * TILE_WIDTH * -1.0;
     let mut waypoints_map: HashMap<usize, Coordinates> = HashMap::new();
     for (index, sprite_index) in waypoint_layer.data.iter().enumerate() {
         if *sprite_index != 0 {
@@ -143,7 +137,7 @@ fn load_map(mut commands: Commands) {
         }
     }
 
-    let path = sort_waypoints(&mut waypoints_map, height_offset);
+    let path = sort_waypoints(&mut waypoints_map);
     let current_map = CurrentMap {
         height_offset,
         path: MapPath {
@@ -160,7 +154,6 @@ fn render_map(mut commands: Commands, handles: Res<SpriteSheets>, current_map: R
 
     let map = &current_map.data;
     let layer = &current_map.data.layers[0].data;
-    let height_offset = current_map.height_offset;
 
     for (index, sprite_index) in layer.iter().enumerate() {
         if *sprite_index != 0 {
@@ -179,7 +172,7 @@ fn render_map(mut commands: Commands, handles: Res<SpriteSheets>, current_map: R
                     ..default()
                 },
                 transform: Transform {
-                    translation: Vec3::new(screen_x, screen_y + height_offset, 1.0),
+                    translation: Vec3::new(screen_x, screen_y, 1.0),
                     ..default()
                 },
                 ..default()
@@ -211,15 +204,12 @@ fn render_cursor(mut commands: Commands, handles: Res<SpriteSheets>) {
 fn update_cursor(
     mouse_pos: Res<MouseWorldPos>,
     mut query: Query<&mut Transform, With<CursorIndicator>>,
-    current_map: Res<CurrentMap>,
 ) {
-    let height_offset = current_map.height_offset;
-    let total_offset = height_offset + TILE_HEIGHT_OFFSET;
     let mut transform = query.single_mut();
     let iso_position = screen_to_coordinates(&ScreenCoordinates::new(
         mouse_pos.x,
-        mouse_pos.y - total_offset ,
+        mouse_pos.y - TILE_HEIGHT_OFFSET,
     ));
     let ScreenCoordinates { x, y } = coordinates_to_screen(&iso_position);
-    transform.translation = Vec3::new(x, y + total_offset, 2.0);
+    transform.translation = Vec3::new(x, y + TILE_HEIGHT_OFFSET, 2.0);
 }
