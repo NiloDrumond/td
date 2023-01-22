@@ -1,5 +1,5 @@
-use bevy::prelude::*;
 use assets::AssetsPlugin;
+use bevy::prelude::*;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_prototype_debug_lines::DebugLinesPlugin;
 use camera::CameraPlugin;

@@ -2,7 +2,7 @@ use bevy::{prelude::*, sprite::Anchor};
 
 use crate::{
     assets::SpriteSheets,
-    config::{SysLabel, ENEMY_OFFSET},
+    config::{SysLabel, BASE_Z_INDEX, ENEMY_OFFSET},
     hud::HealthBar,
     isometric::ScreenCoordinates,
     map::CurrentMap,
@@ -111,6 +111,7 @@ fn spawn_enemy(
         sprite_index
     };
 
+    println!("{}", screen_y);
     commands
         .spawn(EnemyBundle {
             sprite: SpriteSheetBundle {
@@ -122,7 +123,11 @@ fn spawn_enemy(
                     ..default()
                 },
                 transform: Transform {
-                    translation: Vec3::new(screen_x, screen_y + ENEMY_OFFSET, 1.0),
+                    translation: Vec3::new(
+                        screen_x,
+                        screen_y + ENEMY_OFFSET,
+                        -screen_y + BASE_Z_INDEX,
+                    ),
                     ..default()
                 },
                 ..default()

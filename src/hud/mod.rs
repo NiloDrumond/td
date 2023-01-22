@@ -1,11 +1,8 @@
-use bevy::{
-    prelude::*,
-    sprite::Anchor,
-};
+use bevy::{prelude::*, sprite::Anchor};
 
 use crate::{
     assets::SpriteSheets,
-    config::{STATBAR_WIDTH, TILE_HEIGHT},
+    config::{HUD_Z_INDEX, STATBAR_WIDTH, TILE_HEIGHT},
     enemy::{Enemy, Health},
 };
 
@@ -31,7 +28,7 @@ pub struct HealthBar {
 impl Plugin for HUDPlugin {
     fn build(&self, app: &mut App) {
         app.add_system(attach_health_bar)
-            .add_system(update_health_bar);
+            .add_system_to_stage(CoreStage::PostUpdate, update_health_bar);
     }
 }
 
@@ -40,19 +37,19 @@ fn attach_health_bar(
     q_enemies: Query<(Entity, &Transform), (With<Enemy>, Without<HealthBar>)>,
     handles: Res<SpriteSheets>,
 ) {
-    let texture_atlas = &handles.statbar_sprites;
+    let handle = &handles.statbar_sprites;
     for (entity, transform) in q_enemies.iter() {
         let base_translation = Vec3::new(
             transform.translation.x + STATBAR_WIDTH / 2.0,
             transform.translation.y + TILE_HEIGHT / 2.0,
-            3.0,
+            HUD_Z_INDEX,
         );
-        let fill_translation = Vec3::new(0.0, 0.0, 4.0);
+        let fill_translation = Vec3::new(0.0, 0.0, HUD_Z_INDEX + 1.0);
 
         let bar_entity = commands
             .spawn(HealthbarBundle {
                 base: SpriteSheetBundle {
-                    texture_atlas: texture_atlas.clone(),
+                    texture_atlas: handle.clone(),
                     sprite: TextureAtlasSprite {
                         anchor: Anchor::CenterRight,
                         index: 1,
@@ -70,7 +67,7 @@ fn attach_health_bar(
         commands.entity(bar_entity).add_children(|parent| {
             parent
                 .spawn(SpriteSheetBundle {
-                    texture_atlas: texture_atlas.clone(),
+                    texture_atlas: handle.clone(),
                     sprite: TextureAtlasSprite {
                         anchor: Anchor::CenterRight,
                         index: 0,
@@ -107,7 +104,7 @@ fn update_health_bar(
             bar_transform.translation = Vec3::new(
                 transform.translation.x + STATBAR_WIDTH / 2.0,
                 transform.translation.y + TILE_HEIGHT / 2.0,
-                3.0,
+                HUD_Z_INDEX,
             );
             bar_visiblity.is_visible = true;
             let fill = children.get(0).unwrap();

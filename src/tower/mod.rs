@@ -3,7 +3,7 @@ use bevy::{prelude::*, sprite::Anchor, time::FixedTimestep};
 use crate::{
     assets::SpriteSheets,
     camera::MouseWorldPos,
-    config::TILE_HEIGHT_OFFSET,
+    config::{BASE_Z_INDEX, TILE_HEIGHT_OFFSET},
     isometric::{coordinates_to_screen, screen_to_coordinates, Coordinates, ScreenCoordinates},
 };
 
@@ -90,7 +90,11 @@ fn spawn_tower(
                     ..default()
                 },
                 transform: Transform {
-                    translation: Vec3::new(screen_x, screen_y + TILE_HEIGHT_OFFSET, 1.0),
+                    translation: Vec3::new(
+                        screen_x,
+                        screen_y + TILE_HEIGHT_OFFSET,
+                        -screen_y + BASE_Z_INDEX,
+                    ),
                     ..default()
                 },
                 ..default()
